@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="700.0" prefWidth="600.0" style="-fx-background-color: #d2efff;" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.itmo.socket.client.controllers.EditController">
+    <children>
+        <Label fx:id="titleLabel" alignment="CENTER" layoutX="70.0" layoutY="27.0" prefHeight="43.0" prefWidth="270.0" text="Редактирование" textAlignment="CENTER">
+            <font>
+                <Font name="Segoe UI Black" size="30.0" />
+            </font>
+        </Label>
+
+        <!-- Основные поля Route -->
+        <Label layoutX="60.0" layoutY="89.0" text="Name">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Label>
+        <Label layoutX="60.0" layoutY="132.0" text="Coord X">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Label>
+        <Label layoutX="224.0" layoutY="132.0" text="Coord Y">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Label>
+        <Label layoutX="60.0" layoutY="175.0" text="Distance">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Label>
+
+        <TextField fx:id="nameField" layoutX="162.0" layoutY="89.0" prefHeight="26.0" prefWidth="376.0">
+            <font>
+                <Font name="Segoe UI" size="12.0" />
+            </font>
+        </TextField>
+        <TextField fx:id="coordXField" layoutX="162.0" layoutY="132.0" prefHeight="26.0" prefWidth="176.0">
+            <font>
+                <Font name="Segoe UI" size="12.0" />
+            </font>
+        </TextField>
+        <TextField fx:id="coordYField" layoutX="350.0" layoutY="132.0" prefHeight="26.0" prefWidth="176.0">
+            <font>
+                <Font name="Segoe UI" size="12.0" />
+            </font>
+        </TextField>
+        <TextField fx:id="distanceField" layoutX="162.0" layoutY="175.0" prefHeight="26.0" prefWidth="176.0">
+            <font>
+                <Font name="Segoe UI" size="12.0" />
+            </font>
+        </TextField>
+
+        <!-- Поля для Location From -->
+        <CheckBox fx:id="fromCheckBox" layoutX="60.0" layoutY="218.0" mnemonicParsing="false" text="From Location">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </CheckBox>
+
+        <Label layoutX="80.0" layoutY="261.0" text="From Name">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="304.0" text="From X">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="347.0" text="From Y">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="390.0" text="From Z">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+
+        <TextField fx:id="fromNameField" layoutX="200.0" layoutY="261.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="fromXField" layoutX="200.0" layoutY="304.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="fromYField" layoutX="200.0" layoutY="347.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="fromZField" layoutX="200.0" layoutY="390.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+
+        <!-- Поля для Location To -->
+        <CheckBox fx:id="toCheckBox" layoutX="60.0" layoutY="433.0" mnemonicParsing="false" text="To Location">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </CheckBox>
+
+        <Label layoutX="80.0" layoutY="476.0" text="To Name">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="519.0" text="To X">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="562.0" text="To Y">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+        <Label layoutX="80.0" layoutY="605.0" text="To Z">
+            <font>
+                <Font name="Segoe UI" size="16.0" />
+            </font>
+        </Label>
+
+        <TextField fx:id="toNameField" layoutX="200.0" layoutY="476.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="toXField" layoutX="200.0" layoutY="519.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="toYField" layoutX="200.0" layoutY="562.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+        <TextField fx:id="toZField" layoutX="200.0" layoutY="605.0" prefHeight="26.0" prefWidth="340.0" disable="true"/>
+
+        <!-- Кнопки -->
+        <Button fx:id="okButton" layoutX="60.0" layoutY="650.0" mnemonicParsing="false" onAction="#ok" prefHeight="38.0" prefWidth="116.0" style="-fx-background-radius: 10; -fx-border-radius: 10;" text="OK">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Button>
+        <Button fx:id="cancelButton" layoutX="224.0" layoutY="650.0" mnemonicParsing="false" prefHeight="38.0" prefWidth="116.0" style="-fx-background-radius: 10; -fx-border-radius: 10;" text="Cancel">
+            <font>
+                <Font name="Segoe UI" size="20.0" />
+            </font>
+        </Button>
+    </children>
+</AnchorPane>

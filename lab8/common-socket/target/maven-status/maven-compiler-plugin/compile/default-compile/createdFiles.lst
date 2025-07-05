@@ -1,0 +1,16 @@
+ru\itmo\socket\common\dto\UserDto.class
+ru\itmo\socket\common\exception\AppCommandNotFoundException.class
+ru\itmo\socket\common\exception\BadOwnerException.class
+ru\itmo\socket\common\entity\Location.class
+ru\itmo\socket\common\exception\APIException.class
+ru\itmo\socket\common\command\AppCommand.class
+ru\itmo\socket\common\util\RouteInputHelper.class
+ru\itmo\socket\common\exception\AppExitException.class
+ru\itmo\socket\common\exception\NotFoundException.class
+ru\itmo\socket\common\dto\CommandDto.class
+ru\itmo\socket\common\exception\ScriptRecursionException.class
+ru\itmo\socket\common\util\ConnectionContext.class
+ru\itmo\socket\common\exception\InvalidFormException.class
+ru\itmo\socket\common\entity\Coordinates.class
+ru\itmo\socket\common\exception\UserAlreadyExistsException.class
+ru\itmo\socket\common\entity\Route.class

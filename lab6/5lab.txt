@@ -1,0 +1,1012 @@
+Структура проекта:
+
+Commands:
+--- Add.java
+--- Clear.java
+--- CommandManager.java
+--- ExecuteScript.java
+--- Exit.java
+--- Head.java
+--- Help.java
+--- Info.java
+--- MaxByCreationDate.java
+--- PrintDescending.java
+--- PrintUniqueDistance.java
+--- RemoveById.java
+--- RemoveHead.java
+--- RemoveLower.java
+--- Save.java
+--- Show.java
+--- Update.java
+
+Data:
+--- DataProvider.java
+
+Models:
+--- Coordinates.java
+--- Filler.java
+--- Location.java
+--- Route.java
+
+Main.java
+
+-------------------------------------------
+
+Код программ.
+
+Main.java:
+import Data.DataProvider;
+import Models.Route;
+import Commands.CommandManager;
+import java.io.*;
+import java.util.LinkedList;
+import java.util.Scanner;
+
+public class Main {
+    private static final String DEFAULT_FILENAME = "data.csv";
+
+    public static void main(String[] args) {
+        String filename = (args.length > 0) ? args[0] : DEFAULT_FILENAME;
+
+        LinkedList<Route> routes = loadRoutes(filename);
+        CommandManager commandManager = new CommandManager(routes);
+
+        startInteractiveMode(commandManager);
+    }
+
+    private static LinkedList<Route> loadRoutes(String filename) {
+        DataProvider dataProvider = new DataProvider();
+        File file = new File(filename);
+
+        if (!file.exists()) {
+            System.out.println("Файл " + filename + " не найден. Создана новая коллекция.");
+            return new LinkedList<>();
+        }
+
+        try {
+            LinkedList<Route> routes = dataProvider.load(filename);
+            System.out.println("Загружено " + routes.size() + " маршрутов из " + filename);
+            return routes;
+        } catch (IOException e) {
+            System.err.println("Ошибка загрузки файла:");
+            e.printStackTrace();
+            return new LinkedList<>();
+        }
+    }
+
+    private static void startInteractiveMode(CommandManager commandManager) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Программа управления коллекцией маршрутов");
+        System.out.println("Введите 'help' для списка команд");
+
+        while (true) {
+            System.out.print("> ");
+            String input = scanner.nextLine().trim();
+
+            if (input.equalsIgnoreCase("exit")) {
+                System.out.println("Выход из программы");
+                break;
+            }
+
+            if (!input.isEmpty()) {
+                commandManager.executeCommand(input);
+            }
+        }
+        scanner.close();
+    }
+}
+
+DataProvider.java:
+package Data;
+
+import Models.*;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+
+public class DataProvider {
+    private static final String CSV_SEPARATOR = ",";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    public void save(LinkedList<Route> routes, String fileName) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(
+                        new FileOutputStream(fileName),
+                        StandardCharsets.UTF_8))) {
+
+            writer.write("id,name,distance,creationDate,coordX,coordY,fromX,fromY,fromZ,fromName,toX,toY,toZ,toName");
+            writer.newLine();
+
+            for (Route route : routes) {
+                writer.write(routeToCsvLine(route));
+                writer.newLine();
+            }
+        }
+    }
+
+    public LinkedList<Route> load(String fileName) throws IOException {
+        LinkedList<Route> routes = new LinkedList<>();
+        Set<Long> idSet = new HashSet<>();
+
+        File file = new File(fileName);
+        if (!file.exists()) {
+            throw new FileNotFoundException("Файл " + fileName + " не найден");
+        }
+        if (file.length() == 0) {
+            throw new IOException("Файл пуст");
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(fileName), StandardCharsets.UTF_8))) {
+
+            String header = reader.readLine();
+            if (header == null || !header.startsWith("id,name,distance")) {
+                throw new IOException("Некорректный формат файла");
+            }
+
+            String line;
+            int lineNumber = 1;
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                Route route = parseCsvLine(line);
+
+                if (idSet.contains(route.getId())) {
+                    System.out.println("Обнаружен дубликат ID " + route.getId() + " в строке " + lineNumber);
+                    break;
+                }
+                idSet.add(route.getId());
+
+                routes.add(route);
+            }
+        }
+        return routes;
+    }
+
+    private String routeToCsvLine(Route route) {
+        return String.join(CSV_SEPARATOR,
+                String.valueOf(route.getId()),
+                (route.getName()),
+                String.valueOf(route.getDistance()),
+                route.getCreationDate().format(DATE_FORMATTER),
+                String.valueOf(route.getCoordinates().getX()),
+                String.valueOf(route.getCoordinates().getY()),
+                route.getFrom() != null ? String.valueOf(route.getFrom().getX()) : "",
+                route.getFrom() != null ? String.valueOf(route.getFrom().getY()) : "",
+                route.getFrom() != null ? String.valueOf(route.getFrom().getZ()) : "",
+                route.getFrom() != null ? (route.getFrom().getName()) : "",
+                route.getTo() != null ? String.valueOf(route.getTo().getX()) : "",
+                route.getTo() != null ? String.valueOf(route.getTo().getY()) : "",
+                route.getTo() != null ? String.valueOf(route.getTo().getZ()) : "",
+                route.getTo() != null ? (route.getTo().getName()) : ""
+        );
+    }
+
+    private Route parseCsvLine(String line) throws IllegalArgumentException {
+        String[] values = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+        if (values.length < 14) {
+            throw new IllegalArgumentException("Недостаточно данных в строке");
+        }
+
+        Route route = new Route();
+        try {
+            route.setId(Long.parseLong(values[0]));
+            route.setName((values[1]));
+            route.setDistance(Integer.parseInt(values[2]));
+
+            Coordinates coords = new Coordinates();
+            coords.setX(Double.parseDouble(values[4]));
+            coords.setY(Integer.parseInt(values[5]));
+            route.setCoordinates(coords);
+
+            if (!values[6].isEmpty()) {
+                Location from = new Location();
+                from.setX(Integer.parseInt(values[6]));
+                from.setY(Double.parseDouble(values[7]));
+                from.setZ(Integer.parseInt(values[8]));
+                from.setName((values[9]));
+                route.setFrom(from);
+            }
+
+            if (!values[10].isEmpty()) {
+                Location to = new Location();
+                to.setX(Integer.parseInt(values[10]));
+                to.setY(Double.parseDouble(values[11]));
+                to.setZ(Integer.parseInt(values[12]));
+                to.setName((values[13]));
+                route.setTo(to);
+            }
+
+            return route;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Некорректный числовой формат");
+        }
+    }
+}
+
+Route.java:
+package Models;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+public class Route implements Serializable, Comparable<Route> {
+    private static long idCounter = 1;
+    private long id; //Значение поля должно быть больше 0, Значение этого поля должно быть уникальным, Значение этого поля должно генерироваться автоматически
+    private String name; //Поле не может быть null, Строка не может быть пустой
+    private Coordinates coordinates; //Поле не может быть null
+    private LocalDateTime creationDate; //Поле не может быть null, Значение этого поля должно генерироваться автоматически
+    private Location from; //Поле может быть null
+    private Location to; //Поле может быть null
+    private int distance; //Значение поля должно быть больше 1
+
+    public Route() {
+        this.id = idCounter++;
+        this.creationDate = LocalDateTime.now();
+    }
+    public void setId(long id){
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDistance(int distance) {
+        this.distance = distance;
+    }
+
+    public void setCoordinates(Coordinates coordinates){
+        if (coordinates == null) {
+            throw new IllegalArgumentException("Координаты не могут быть null");
+        }
+        this.coordinates = coordinates;
+    }
+
+    public void setFrom (Location from){
+        this.from = from;
+    }
+    public void setTo (Location to){
+        this.to = to;
+    }
+
+    public long getId(){
+        return id;
+    }
+
+    public String getName(){
+        return name;
+    }
+
+    public Coordinates getCoordinates(){
+        return coordinates;
+    }
+
+    public LocalDateTime getCreationDate(){
+        return creationDate;
+    }
+
+    public Location getFrom(){
+        return from;
+    }
+
+    public Location getTo(){
+        return to;
+    }
+
+    public int getDistance(){
+        return distance;
+    }
+    @Override
+    public String toString() {
+        return String.format(
+                "Route{id=%d, name='%s', distance=%d, creationDate=%s, coordinates=%s, from=%s, to=%s}",
+                id, name, distance, creationDate, coordinates, from, to
+        );
+    }
+
+    @Override
+    public int compareTo(Route other) {
+        return Long.compare(this.id, other.id);
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Route route = (Route) obj;
+        return id == route.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (id ^ (id >>> 32));
+    }
+}
+
+Location.java:
+package Models;
+
+public class Location {
+    private Integer x; //Поле не может быть null
+    private double y;
+    private int z;
+    private String name; //Строка не может быть пустой, Поле не может быть null
+
+    public void setX(Integer x) {
+        this.x = x;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setY (double y){
+        this.y = y;
+    }
+
+    public void setZ(int z){
+        this.z = z;
+    }
+    public Integer getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public int getZ() {
+        return z;
+    }
+
+    public String getName() {
+        return name;
+    }
+    @Override
+    public String toString() {
+        return String.format(
+                "{name='%s', x=%d, y='%s', z=%dm }",
+                name, x, y, z
+        );
+    }
+}
+
+Filler.java:
+package Models;
+
+import java.util.Scanner;
+
+public class Filler {
+    public void fill(Route route) {
+        Scanner sc = new Scanner(System.in);
+
+        while (true){
+            System.out.print("Введите имя маршрута: ");
+            String name = sc.nextLine();
+            if (name == null || name.isEmpty()) {
+                System.out.println("Имя маршрута не может быть пустым или null");
+            }
+            else{
+                route.setName(name);
+                break;
+            }
+        }
+
+
+        Coordinates coordinates = new Coordinates();
+
+        while (true){
+            try{
+                System.out.print("Введите координату x (должна быть > -68): ");
+                Double x = Double.parseDouble(sc.nextLine());
+                if (x <= -68) {
+                    System.out.println("x должен быть больше -68");
+                }
+                else {
+                    coordinates.setX(x);
+                    break;
+                }
+            }
+            catch (NumberFormatException e){
+                System.out.println("Вводить надо int");
+            }
+        }
+        while (true){
+            try{
+                System.out.print("Введите координату y: ");
+                coordinates.setY(Integer.parseInt(sc.nextLine()));
+                route.setCoordinates(coordinates);
+                break;
+            }
+            catch (NumberFormatException e) {
+                System.out.println("Вводить надо int");
+            }
+        }
+        System.out.print("Ввести начало маршрута? (Y/N): ");
+        while (true) {
+            String ans = sc.nextLine().trim();
+            if (ans.equals("Y")){
+                System.out.println("Введите начальную локацию");
+                Location from = new Location();
+                while (true){
+                    try {
+                        System.out.print("Введите координату x для from (не null): ");
+                        Integer x = Integer.parseInt(sc.nextLine());
+                        from.setX(x);
+                        break;
+
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    try{
+                        System.out.print("Введите координату y для from: ");
+                        from.setY(Double.parseDouble(sc.nextLine()));
+                        break;
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    try{
+                        System.out.print("Введите координату z для from: ");
+                        from.setZ(Integer.parseInt(sc.nextLine()));
+                        break;
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    System.out.print("Введите название локации from: ");
+                    String name = sc.nextLine();
+                    if (name == null || name.isEmpty()) {
+                        System.out.println("Имя не может быть пустым или null");
+                    }
+                    else{
+                        from.setName(name);
+                        break;
+                    }
+                }
+                route.setFrom(from);
+
+            }
+            if (ans.equals("N")){
+                break;
+            }
+            else{
+                System.out.print("Введите 'Y' или 'N': ");
+            }
+        }
+
+        System.out.print("Ввести конец маршрута? (Y/N): ");
+        while (true) {
+            String ans = sc.nextLine().trim();
+            if (ans.equals("Y")){
+                System.out.println("Введите конечную локацию");
+                Location to = new Location();
+                while (true){
+                    try{
+                        System.out.print("Введите координату x для to (не null): ");
+                        Integer x = Integer.parseInt(sc.nextLine());
+                        to.setX(x);
+                        break;
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    try{
+                        System.out.print("Введите координату y для to: ");
+                        to.setY(Double.parseDouble(sc.nextLine()));
+                        break;
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    try{
+                        System.out.print("Введите координату z для to: ");
+                        to.setZ(Integer.parseInt(sc.nextLine()));
+                        break;
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println("Вводить надо int");
+                    }
+                }
+
+                while (true){
+                    System.out.print("Введите название локации to: ");
+                    String name = sc.nextLine();
+                    if (name == null || name.isEmpty()) {
+                        System.out.println("Имя не может быть пустым или null");
+                    }
+                    else{
+                        to.setName(name);
+                        break;
+                    }
+                }
+
+                route.setTo(to);
+                break;
+            }
+            if (ans.equals("N")){
+                break;
+            }
+            else{
+                System.out.print("Введите 'Y' или 'N': ");
+            }
+        }
+
+
+        while (true){
+            try{
+                System.out.print("Введите дистанцию (должна быть > 1): ");
+                Integer distance = Integer.parseInt(sc.nextLine());
+                if (distance <= 1){
+                    System.out.println("Дистанция должна быть > 1");
+                }
+                else{
+                    route.setDistance(distance);
+                    break;
+                }
+            }
+            catch (NumberFormatException e) {
+                System.out.println("Вводить надо int");
+            }
+        }
+
+
+    }
+}
+
+Coordinates.java:
+package Models;
+
+public class Coordinates {
+    private double x; //Значение поля должно быть больше -68
+    private int y;
+
+    public void setX(double x) {
+        this.x = x;
+    }
+
+    public void setY(int y){
+        this.y = y;
+    }
+    public double getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+    @Override
+    public String toString() {
+        return String.format(
+                "{x='%s', y=%d}",
+                x, y
+        );
+    }
+
+
+
+}
+
+CommandManager.java:
+package Commands;
+
+import Models.Route;
+import java.util.LinkedList;
+
+public class CommandManager {
+    private final LinkedList<Route> routes;
+    private final ExecuteScript executeScript;
+
+    public CommandManager(LinkedList<Route> routes) {
+        this.routes = routes;
+        this.executeScript = new ExecuteScript(this); // Передаем текущий CommandManager
+    }
+
+    public void executeCommand(String userInput) {
+        String[] parts = userInput.trim().split(" ", 2);
+        String command = parts[0].toLowerCase();
+        String argument = parts.length > 1 ? parts[1] : null;
+            try {
+                switch (command) {
+                    case "execute_script" -> executeScript.execute(argument);
+                    case "help" -> Help.execute();
+                    case "info" -> Info.execute(routes);
+                    case "show" -> Show.execute(routes);
+                    case "add" -> Add.execute(routes);
+                    case "update" -> Update.execute(routes, argument);
+                    case "remove_by_id" -> RemoveById.execute(routes, argument);
+                    case "clear" -> Clear.execute(routes);
+                    case "save" -> Save.execute(routes);
+                    case "exit" -> Exit.execute();
+                    case "head" -> Head.execute(routes);
+                    case "remove_head" -> RemoveHead.execute(routes);
+                    case "remove_lower" -> RemoveLower.execute(routes, argument);
+                    case "max_by_creation_date" -> MaxByCreationDate.execute(routes);
+                    case "print_descending" -> PrintDescending.execute(routes);
+                    case "print_unique_distance" -> PrintUniqueDistance.execute(routes);
+                    default -> System.out.println("Неизвестная команда. Введите 'help' для списка команд.");
+                }
+            } catch (Exception e) {
+                System.out.println("Ошибка: " + e.getMessage());
+            }
+        }
+    }
+
+ExecuteScript.java:
+package Commands;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
+
+
+public class ExecuteScript {
+    private final CommandManager commandManager;
+    private static final Set<String> executingScripts = new HashSet<>();
+    private static final int MAX_RECURSION_DEPTH = 10;
+    private int currentDepth = 0;
+
+
+    public ExecuteScript(CommandManager commandManager) {
+        this.commandManager = commandManager;
+    }
+
+
+    public void execute(String fileName) {
+        // Преобразуем относительный путь в абсолютный
+        File scriptFile = new File(fileName);
+        if (!scriptFile.exists()) {
+            System.out.println("Файл не найден по пути: " + scriptFile.getAbsolutePath());
+            return;
+        }
+        // Проверка на рекурсию
+        if (executingScripts.contains(fileName)) {
+            System.out.println("Ошибка: Обнаружена рекурсия в скрипте '" + fileName + "'");
+            return;
+        }
+
+        // Проверка глубины рекурсии
+        if (currentDepth >= MAX_RECURSION_DEPTH) {
+            System.out.println("Ошибка: Превышена максимальная глубина рекурсии (" + MAX_RECURSION_DEPTH + ")");
+            return;
+        }
+
+        // Добавляем файл в выполняемые
+        executingScripts.add(fileName);
+        currentDepth++;
+
+        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(fileName), StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(isr)) {
+
+            System.out.println("Выполнение скрипта: " + fileName);
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    commandManager.executeCommand(line);
+                }
+            }
+
+            System.out.println("Скрипт успешно выполнен: " + fileName);
+        } catch (FileNotFoundException e) {
+            System.out.println("Ошибка: Файл скрипта не найден: " + fileName);
+        } catch (IOException e) {
+            System.out.println("Ошибка ввода-вывода при выполнении скрипта: " + e.getMessage());
+        } finally {
+            executingScripts.remove(fileName);
+            currentDepth--;
+        }
+    }
+}
+
+Help.java:
+package Commands;
+
+public class Help {
+    public static void execute() {
+        System.out.println("""
+            Список команд:
+            help - вывести справку по доступным командам
+            info - информация о коллекции
+            show - вывести все элементы коллекции
+            add - добавить новый элемент в коллекцию
+            update id - обновить элемент по ID
+            remove_by_id id - удалить элемент по ID
+            clear - очистить коллекцию
+            save - сохранить коллекцию в файл
+            execute_script file_name - считать и выполнить скрипт
+            exit - завершить программу
+            head - вывести первый элемент коллекции
+            remove_head - вывести первый элемент коллекции и удалить его
+            remove_lower {element} - удалить элементы коллекции меньше заданного
+            max_by_creation_date - вывести элемент коллекции с максимальной датой создания
+            print_descending - вывести элементы коллекции в порядке убывания
+            print_unique_distance - уникальные значения distance
+            """);
+    }
+}
+
+Save.java:
+package Commands;
+
+import Data.DataProvider;
+import Models.Route;
+
+import java.util.LinkedList;
+
+public class Save {
+    public static void execute(LinkedList<Route> routes) {
+        try {
+            new DataProvider().save(routes, "data.csv");
+            System.out.println("Коллекция сохранена в файл.");
+        } catch (Exception e) {
+            System.out.println("Ошибка сохранения: " + e.getMessage());
+        }
+    }
+}
+
+Update.java:
+package Commands;
+
+import Models.Filler;
+import Models.Route;
+import java.util.LinkedList;
+
+public class Update {
+    public static void execute(LinkedList<Route> routes, String arg) {
+        if (arg == null) {
+            System.out.println("Ошибка: укажите ID.");
+            return;
+        }
+
+        long id = Long.parseLong(arg);
+        Route route = routes.stream()
+                .filter(r -> r.getId() == id)
+                .findFirst()
+                .orElse(null);
+
+        if (route == null) {
+            System.out.println("Элемент с ID " + id + " не найден.");
+            return;
+        }
+
+        new Filler().fill(route);
+        System.out.println("Элемент обновлён.");
+    }
+}
+
+Show.java:
+package Commands;
+
+import Models.Route;
+import java.util.LinkedList;
+
+public class Show {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+        routes.forEach(System.out::println);
+    }
+}
+
+Add.java:
+package Commands;
+
+import Models.Filler;
+import Models.Route;
+import java.util.LinkedList;
+
+public class Add {
+    public static void execute(LinkedList<Route> routes) {
+        Route route = new Route();
+        new Filler().fill(route);
+        routes.add(route);
+        System.out.println("Элемент добавлен. ID: " + route.getId());
+    }
+}
+
+Clear.java:
+package Commands;
+
+import java.util.LinkedList;
+
+public class Clear {
+    public static void execute(LinkedList<?> routes) {
+        routes.clear();
+        System.out.println("Коллекция очищена.");
+    }
+}
+
+Exit.java:
+package Commands;
+
+public class Exit {
+    public static void execute() {
+        System.out.println("Завершение программы.");
+        System.exit(0);
+    }
+}
+
+Head.java:
+package Commands;
+
+import Models.Route;
+
+import java.util.LinkedList;
+
+public class Head {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+        System.out.println(routes.getFirst());
+    }
+}
+
+Info.java:
+package Commands;
+
+import Models.Route;
+import java.util.LinkedList;
+
+public class Info {
+    public static void execute(LinkedList<Route> routes) {
+        System.out.printf("""
+            Тип коллекции: %s
+            Количество элементов: %d
+            Дата инициализации: %s
+            """,
+                routes.getClass().getName(),
+                routes.size(),
+                routes.isEmpty() ? "не инициализирована" : routes.getFirst().getCreationDate()
+        );
+    }
+}
+
+MaxByCreationDate.java:
+package Commands;
+
+import Models.Route;
+
+import java.util.Comparator;
+import java.util.LinkedList;
+
+public class MaxByCreationDate {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+
+        Route maxRoute = routes.stream()
+                .max(Comparator.comparing(Route::getCreationDate))
+                .get();
+        System.out.println(maxRoute);
+    }
+}
+
+PrintDescending.java:
+package Commands;
+
+import Models.Route;
+import java.util.Comparator;
+import java.util.LinkedList;
+
+public class PrintDescending {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+
+        routes.stream()
+                .sorted(Comparator.reverseOrder())
+                .forEach(System.out::println);
+    }
+}
+
+PrintUniqueDistance.java:
+package Commands;
+
+import Models.Route;
+
+import java.util.LinkedList;
+import java.util.stream.Collectors;
+
+public class PrintUniqueDistance {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+
+        System.out.println("Уникальные значения distance:");
+        routes.stream()
+                .map(Route::getDistance)
+                .distinct()
+                .forEach(System.out::println);
+    }
+}
+
+RemoveById.java:
+package Commands;
+
+import Models.Route;
+import java.util.LinkedList;
+
+public class RemoveById {
+    public static void execute(LinkedList<Route> routes, String arg) {
+        if (arg == null) {
+            System.out.println("Ошибка: укажите ID.");
+            return;
+        }
+
+        long id = Long.parseLong(arg);
+        if (routes.removeIf(r -> r.getId() == id)) {
+            System.out.println("Элемент удалён.");
+        } else {
+            System.out.println("Элемент с ID " + id + " не найден.");
+        }
+    }
+}
+
+RemoveHead.java:
+package Commands;
+
+import Models.Route;
+
+import java.util.LinkedList;
+
+public class RemoveHead {
+    public static void execute(LinkedList<Route> routes) {
+        if (routes.isEmpty()) {
+            System.out.println("Коллекция пуста.");
+            return;
+        }
+        System.out.println("Удалён элемент: " + routes.removeFirst());
+    }
+}
+
+RemoveLower.java:
+package Commands;
+
+import Models.Filler;
+import Models.Route;
+import java.util.LinkedList;
+
+public class RemoveLower {
+    public static void execute(LinkedList<Route> routes, String arg) {
+        if (arg == null) {
+            System.out.println("Ошибка: укажите элемент для сравнения.");
+            return;
+        }
+
+        Route comparator = new Route();
+        new Filler().fill(comparator);
+        int initialSize = routes.size();
+        routes.removeIf(route -> route.compareTo(comparator) < 0);
+        System.out.println("Удалено элементов: " + (initialSize - routes.size()));
+    }
+}
